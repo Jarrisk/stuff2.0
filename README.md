@@ -1,4 +1,4 @@
-# stuff2.0
+# stocksearcher
 
 #Basic Stock Viewer That Pulls Data From Yahoo Finance.
 #Only Uses Day-To-Day Data
