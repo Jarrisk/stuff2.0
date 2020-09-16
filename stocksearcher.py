@@ -7,10 +7,12 @@ import typing
 from typing_extensions import Coroutine
 typing.Coroutine = Coroutine
 from pyppeteer import launch
+from bs4 import BeautifulSoup
 from requests_html import HTMLSession
 import datetime
 import time
 import pdb
+
 #pandas
 import pandas as pd
 from pandas_datareader import data
@@ -84,6 +86,7 @@ def setup():
                 Symbol.append(y)
             if y.lower()==done:
                 loopflag=0
+
         IndexData=[None]*3
         MAString=['','']
         MAint=[0,0]
@@ -201,13 +204,15 @@ def Stats(Symbol):
 
     for i in range(len(Symbol)):
         Symbol[i]=Symbol[i].upper()
+        print('Retrieving Statistics Data On '+Symbol[i]+'...')
         StockData.append(yf.get_stats_valuation(Symbol[i]))
-        
+        print('Received!')
         for col in StockData[i].columns[1:]:
             if Symbol[i] in DateString:
                 DateString[Symbol[i]].append(col)
             else:
                 DateString[Symbol[i]]=[col[12:21]]
+        
         DateString[Symbol[i]]=DateString[Symbol[i]][::-1]
         for j in range(2):
             for k in range(len(StockData[i].iloc[0])-1):
@@ -224,15 +229,17 @@ def Stats(Symbol):
                             elif letter=='T':
                                 StockData[i].iloc[j][k+1]=(StockData[i].iloc[j][k+1])*1e12
                             elif letter=='k':
-                                StockData[i].iloc[j][k+1]=(StockData[i].iloc[j][k+1])*1e3
+                                StockData[i].iloc[j][k+1]=(StockData[i].iloc[j][k+1])*1e3   
                     StockData[i].iloc[j][k+1]=float(StockData[i].iloc[j][k+1])
-                        
+               
+                    
+                     
     for i in range(len(Symbol)):
         fig = make_subplots(rows=9, cols=1)
         for j in range(len(parameter)):
                 fig.add_trace(go.Scatter(x=DateString[Symbol[i]], 
                     y=StockData[i].loc[j][::-1],
-                    name=parameter[j]+' of '+Symbol[i]+' Over Time',
+                    name=parameter[j],
                     line=dict(color=stockcolors[j])), 
                     row=j+1,
                     col=1)
@@ -371,7 +378,7 @@ def GetData(Symbol,IndexData,MAString,MAint):
             while loopflag==1:
                 if len(date_string[i])!=10:
                     print('Invalid date format, should be YYYY-MM-DD.\n'+datestring_inp[i])
-                    date_string[i]=input('--------> ')
+                    #date_string[i]=input('--------> ')
                 else:
                     loopflag=0
             try:
@@ -382,6 +389,7 @@ def GetData(Symbol,IndexData,MAString,MAint):
         
         
     for i in range(len(Symbol)):
+        Symbol[i]=Symbol[i].upper()
         print('Retrieving Stock Data On '+Symbol[i]+'...')
         StockData.append(data.get_data_yahoo(Symbol[i],date_string[0],date_string[1]))
         print('Received!')
@@ -393,36 +401,35 @@ def GetData(Symbol,IndexData,MAString,MAint):
         print('...')
         IndexData[i]= data.get_data_yahoo(IndexString[i],date_string[0],date_string[1])
         
-    bigbussy=['High','Low','Open','Close','Volume','Vol','Adj Close']
     
+    print('What Do You Want To Plot? (Enter 1-6 To Select Option)\n1.High\n2.Low\n3.Open\n4.Close\n5.Volume\n6.Adj Close')
     while loopflag==0:
-        print('Type Either High/Low/Open/Close/Volume/Adj Close To See Specific Stock Movement')
+        
         selectedparameter=input('--------> ')
         
-        if selectedparameter.lower()!=bigbussy[0].lower() and selectedparameter.lower()!=bigbussy[1].lower() and selectedparameter.lower()!=bigbussy[2].lower() and selectedparameter.lower()!=bigbussy[3].lower() and selectedparameter.lower()!=bigbussy[4].lower() and selectedparameter.lower()!=bigbussy[5].lower() and selectedparameter.lower()!=bigbussy[6].lower():
-            print('Invalid text format or wrong entry. Try Again.')
-        elif selectedparameter.lower()==bigbussy[0].lower():
+        if selectedparameter!='1' and selectedparameter!='2' and selectedparameter!='3' and selectedparameter!='4' and selectedparameter!='5' and selectedparameter!='6':
+            print('Invalid Input. Type 1-6 To Select Option.')
+        elif selectedparameter=='1':
             selectedparameter='High'
             loopflag=1
-        elif selectedparameter.lower()==bigbussy[1].lower():
+        elif selectedparameter=='2':
             selectedparameter='Low'
             loopflag=1
-        elif selectedparameter.lower()==bigbussy[2].lower():
+        elif selectedparameter=='3':
             selectedparameter='Open'
             loopflag=1
-        elif selectedparameter.lower()==bigbussy[3].lower():
+        elif selectedparameter=='4':
             selectedparameter='Close'
             loopflag=1
-        elif selectedparameter.lower()==bigbussy[4].lower() or selectedparameter.lower()==bigbussy[5].lower():
+        elif selectedparameter=='5':
             selectedparameter='Volume'
             loopflag=1
-        elif selectedparameter.lower()==bigbussy[6].lower():
+        elif selectedparameter=='6':
             selectedparameter='Adj Close'
             loopflag=1
-        else:
-            loopflag=1
+        
     while loopflag==1:
-        print('Do You Want Custom Moving Averages (automatically set to 50 and 100 day if no)? (y/n)')
+        print('Do You Want Custom Moving Averages (automatically set to 50 and 100 day if no)? (type either y/n)')
         MAOption0=input('--------> ') 
         MAStringArray=['y','yes','n','no']
         if MAOption0.lower()==MAStringArray[0] or MAOption0.lower()==MAStringArray[1]:
@@ -441,10 +448,10 @@ def GetData(Symbol,IndexData,MAString,MAint):
             loopflag=0
         else:
             print('Invalid Response, Try Again')
-    return PlotData(StockData,IndexData,Symbol,selectedparameter,MAString,MAint,bigbussy,date_string)  
+    return PlotData(StockData,IndexData,Symbol,selectedparameter,MAString,MAint,date_string)  
 
 #Callback Function For GetData To Plot Retrieved Data
-def PlotData(Stocks,IndexData,Symbol,parameter,MAString,MAint,bigbussy,date_string):
+def PlotData(Stocks,IndexData,Symbol,parameter,MAString,MAint,date_string):
     stockcolors=['#60669F','#996672','#8CB54A','#34CB92','#FF0015','#1A8283','#8CCF30','#629D63','#7C3AC5','#694DB2','#60669F','#996672','#8CB54A','#34CB92','#FF0015','#1A8283','#8CCF30','#629D63','#7C3AC5','#694DB2''#60669F','#996672','#8CB54A','#34CB92','#FF0015','#1A8283','#8CCF30','#629D63','#7C3AC5','#694DB2''#60669F','#996672','#8CB54A','#34CB92','#FF0015','#1A8283','#8CCF30','#629D63','#7C3AC5','#694DB2''#60669F','#996672','#8CB54A','#34CB92','#FF0015','#1A8283','#8CCF30','#629D63','#7C3AC5','#694DB2''#60669F','#996672','#8CB54A','#34CB92','#FF0015','#1A8283','#8CCF30','#629D63','#7C3AC5','#694DB2''#60669F','#996672','#8CB54A','#34CB92','#FF0015','#1A8283','#8CCF30','#629D63','#7C3AC5','#694DB2''#60669F','#996672','#8CB54A','#34CB92','#FF0015','#1A8283','#8CCF30','#629D63','#7C3AC5','#694DB2''#60669F','#996672','#8CB54A','#34CB92','#FF0015','#1A8283','#8CCF30','#629D63','#7C3AC5','#694DB2''#60669F','#996672','#8CB54A','#34CB92','#FF0015','#1A8283','#8CCF30','#629D63','#7C3AC5','#694DB2']
     MA1colors=['#669F60','#25DA30','#4A8CB5','#9234CB','#0015FF','#82831A','#CF308C','#9D6362','#C57C3A','#4DB269','#669F60','#25DA30','#4A8CB5','#9234CB','#0015FF','#82831A','#CF308C','#9D6362','#C57C3A','#4DB269''#669F60','#25DA30','#4A8CB5','#9234CB','#0015FF','#82831A','#CF308C','#9D6362','#C57C3A','#4DB269''#669F60','#25DA30','#4A8CB5','#9234CB','#0015FF','#82831A','#CF308C','#9D6362','#C57C3A','#4DB269''#669F60','#25DA30','#4A8CB5','#9234CB','#0015FF','#82831A','#CF308C','#9D6362','#C57C3A','#4DB269''#669F60','#25DA30','#4A8CB5','#9234CB','#0015FF','#82831A','#CF308C','#9D6362','#C57C3A','#4DB269''#669F60','#25DA30','#4A8CB5','#9234CB','#0015FF','#82831A','#CF308C','#9D6362','#C57C3A','#4DB269''#669F60','#25DA30','#4A8CB5','#9234CB','#0015FF','#82831A','#CF308C','#9D6362','#C57C3A','#4DB269''#669F60','#25DA30','#4A8CB5','#9234CB','#0015FF','#82831A','#CF308C','#9D6362','#C57C3A','#4DB269''#669F60','#25DA30','#4A8CB5','#9234CB','#0015FF','#82831A','#CF308C','#9D6362','#C57C3A','#4DB269']
     MA2colors=['#9F6066','#DA3025','#B54A8C','#E91627','#15FF00','#831A82','#308CCF','#63629D','#3AC57C','#B2694D','#9F6066','#DA3025','#B54A8C','#E91627','#15FF00','#831A82','#308CCF','#63629D','#3AC57C','#B2694D''#9F6066','#DA3025','#B54A8C','#E91627','#15FF00','#831A82','#308CCF','#63629D','#3AC57C','#B2694D''#9F6066','#DA3025','#B54A8C','#E91627','#15FF00','#831A82','#308CCF','#63629D','#3AC57C','#B2694D''#9F6066','#DA3025','#B54A8C','#E91627','#15FF00','#831A82','#308CCF','#63629D','#3AC57C','#B2694D''#9F6066','#DA3025','#B54A8C','#E91627','#15FF00','#831A82','#308CCF','#63629D','#3AC57C','#B2694D''#9F6066','#DA3025','#B54A8C','#E91627','#15FF00','#831A82','#308CCF','#63629D','#3AC57C','#B2694D''#9F6066','#DA3025','#B54A8C','#E91627','#15FF00','#831A82','#308CCF','#63629D','#3AC57C','#B2694D''#9F6066','#DA3025','#B54A8C','#E91627','#15FF00','#831A82','#308CCF','#63629D','#3AC57C','#B2694D','#9F6066','#DA3025','#B54A8C','#E91627','#15FF00','#831A82','#308CCF','#63629D','#3AC57C','#B2694D']
@@ -522,18 +529,20 @@ def PlotData(Stocks,IndexData,Symbol,parameter,MAString,MAint,bigbussy,date_stri
                     fig.add_trace(go.Scatter(x=IndexData[i].index,y=IndexData[i][MAString[0]],name=MAString[0]+'of the '+parameter+' of '+IndexString[i]+' from '+date_string[0]+' to '+date_string[1], line=dict(color='orange', width=.5)),row=i+1,col=2)
                 if MA=='2' or MA=='4':
                     fig.add_trace(go.Scatter(x=IndexData[i].index,y=IndexData[i][MAString[1]],name=MAString[1]+'of the '+parameter+' of '+IndexString[i]+' from '+date_string[0]+' to '+date_string[1],line=dict(color='green', width=.5)),row=i+1,col=2)
-        titlestring=[date_string[0]+' to '+date_string[1]+' '+parameter+' of ']
-
-        
+        titlestring=date_string[0]+' to '+date_string[1]+' '+parameter+' of '
+        print(titlestring)
+        symbolstring=[]
         for i in range(len(Symbol)):
             num=str(i+1)
             #pdb.set_trace()
-            titlestring.append(Symbol[i])
+            symbolstring.append(Symbol[i])
         
-        titlestring=str(titlestring)[2:-2]
-        titlestring2=titlestring[0:38]
-        titlestring3=titlestring[41:].replace("'","")    
-        titlestring=titlestring2+titlestring3
+        print(symbolstring)
+        symbolstring=str(symbolstring)[1:-1]
+        
+
+        print(symbolstring)
+        titlestring=titlestring+symbolstring
         #fig.layout = Layout(
         #   
         #    
@@ -564,30 +573,34 @@ def PlotData(Stocks,IndexData,Symbol,parameter,MAString,MAint,bigbussy,date_stri
             yesno=input('--------> ')
             if diffstatsanswerstring[0]==yesno.lower() or diffstatsanswerstring[1]==yesno.lower():
                 while loopflag3==0:
-                    print('Type either High/Low/Open/Close/Volume/Adj Close (case sensitive) Close To See Specific Stock Movement')
-                    parameter=input('--------> ')
-                    if parameter.lower()!=bigbussy[0].lower() and parameter.lower()!=bigbussy[1].lower() and parameter.lower()!=bigbussy[2].lower() and parameter.lower()!=bigbussy[3].lower() and parameter.lower()!=bigbussy[4].lower() and parameter.lower()!=bigbussy[5].lower() and parameter.lower()!=bigbussy[6].lower():
+                    print('What Do You Want To Plot? (Enter 1-6 To Select Option)\n1.High\n2.Low\n3.Open\n4.Close\n5.Volume\n6.Adj Close')
+                    selectedparameter=input('--------> ')
+                    if selectedparameter!='1' and selectedparameter!='2' and selectedparameter!='3' and selectedparameter!='4' and selectedparameter!='5' and selectedparameter!='6':
                         print('Invalid text format or wrong entry. Try Again.')
-                    elif parameter.lower()==bigbussy[0].lower():
-                        parameter='High'
-                        PlotData(Stocks,IndexData,Symbol,parameter,MAString,MAint,bigbussy,date_string)
-                    elif parameter.lower()==bigbussy[1].lower():
-                        parameter='Low'
-                        PlotData(Stocks,IndexData,Symbol,parameter,MAString,MAint,bigbussy,date_string)
-                    elif parameter.lower()==bigbussy[2].lower():
-                        parameter='Open'
-                        PlotData(Stocks,IndexData,Symbol,parameter,MAString,MAint,bigbussy,date_string)
-                    elif parameter.lower()==bigbussy[3].lower():
-                        parameter='Close'
-                        PlotData(Stocks,IndexData,Symbol,parameter,MAString,MAint),bigbussy
-                    elif parameter.lower()==bigbussy[4].lower() or parameter.lower()==bigbussy[5].lower():
-                        parameter='Volume'
-                        PlotData(Stocks,IndexData,Symbol,parameter,MAString,MAint,bigbussy,date_string)
-                    elif parameter.lower()==bigbussy[6].lower():
-                        parameter='Adj Close'
-                        PlotData(Stocks,IndexData,Symbol,parameter,MAString,MAint,bigbussy,date_string)
-                    else:
-                        PlotData(Stocks,IndexData,Symbol,parameter,MAString,MAint,bigbussy,)
+                    elif selectedparameter=='1':
+                        selectedparameter='High'
+                        PlotData(Stocks,IndexData,Symbol,selectedparameter,MAString,MAint,date_string)
+                        loopflag=1    
+                    elif selectedparameter=='2':
+                        selectedparameter='Low'
+                        PlotData(Stocks,IndexData,Symbol,selectedparameter,MAString,MAint,date_string)
+                        loopflag=1
+                    elif selectedparameter=='3':
+                        selectedparameter='Open'
+                        PlotData(Stocks,IndexData,Symbol,selectedparameter,MAString,MAint,date_string)
+                        loopflag=1
+                    elif selectedparameter=='4':
+                        selectedparameter='Close'
+                        PlotData(Stocks,IndexData,Symbol,selectedparameter,MAString,MAint,date_string)
+                        loopflag=1
+                    elif selectedparameter=='5':
+                        selectedparameter='Volume'
+                        PlotData(Stocks,IndexData,Symbol,selectedparameter,MAString,MAint,date_string)
+                        loopflag=1
+                    elif selectedparameter=='6':
+                        selectedparameter='Adj Close'
+                        PlotData(Stocks,IndexData,Symbol,selectedparameter,MAString,MAint,date_string)
+                        loopflag=1
             elif diffstatsanswerstring[2]==yesno.lower() or diffstatsanswerstring[3]==yesno.lower():
                 loopflag2=0
             else:
